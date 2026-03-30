@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>都道府県クイズアプリ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #2c5f9e;
+      --primary-dark: #1a4278;
+      --accent: #e8a020;
+      --correct: #27ae60;
+      --wrong: #e74c3c;
+      --bg: #eef2f8;
+      --card: #ffffff;
+      --text: #1a1a2e;
+      --muted: #6b7280;
+      --radius: 14px;
+    }
+
+    body {
+      font-family: 'BIZ UDGothic', 'Yu Gothic', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    /* ===== 共通カード ===== */
+    .screen {
+      display: none;
+      width: 100%;
+      max-width: 640px;
+      animation: fadeIn 0.3s ease;
+    }
+    .screen.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 28px 30px;
+      box-shadow: 0 4px 24px rgba(44,95,158,0.10);
+      margin-bottom: 16px;
+    }
+
+    /* ===== スタート画面 ===== */
+    .app-title {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .app-title h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 0.05em;
+    }
+    .app-title p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .setting-group { display: flex; flex-direction: column; gap: 6px; }
+    .setting-group.full { grid-column: 1 / -1; }
+
+    label.setting-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    select, input[type="range"] {
+      font-family: 'BIZ UDGothic', sans-serif;
+      font-size: 14px;
+      padding: 8px 12px;
+      border: 2px solid #d1dbe8;
+      border-radius: 8px;
+      color: var(--text);
+      background: #f8fafc;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+    select:focus { border-color: var(--primary); }
+
+    .category-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 2px solid #d1dbe8;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+      background: #f8fafc;
+    }
+    .chip.selected {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .count-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .count-row input[type="range"] { flex: 1; padding: 4px 0; border: none; background: transparent; }
+    .count-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+      min-width: 36px;
+      text-align: center;
+    }
+
+    /* ===== ボタン ===== */
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-family: 'BIZ UDGothic', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.05em;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 3px 12px rgba(44,95,158,0.3);
+    }
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-outline {
+      background: #fff;
+      color: var(--primary);
+      border: 2px solid var(--primary);
+    }
+    .btn-outline:hover { background: #eef2f8; }
+    .btn-sm {
+      width: auto;
+      padding: 8px 18px;
+      font-size: 14px;
+      display: inline-block;
+    }
+
+    /* ===== クイズ画面 ===== */
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .quiz-meta { font-size: 13px; color: var(--muted); font-weight: 700; }
+    .quiz-category-badge {
+      background: #eef2f8;
+      color: var(--primary);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* プログレスバー */
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #dce8f5;
+      border-radius: 4px;
+      margin-bottom: 22px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), #5a9fd4);
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+
+    /* タイマー */
+    .timer-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .timer-circle {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 4px solid #dce8f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+      position: relative;
+      transition: border-color 0.3s;
+    }
+    .timer-circle.warning { border-color: var(--accent); color: var(--accent); }
+    .timer-circle.danger  { border-color: var(--wrong);  color: var(--wrong);  }
+
+    /* 問題文 */
+    .question-box {
+      background: linear-gradient(135deg, #f0f5ff 0%, #e8f0fb 100%);
+      border-radius: 12px;
+      padding: 22px 20px;
+      margin-bottom: 20px;
+      text-align: center;
+      border-left: 5px solid var(--primary);
+    }
+    .question-hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .question-text {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    ruby rt { font-size: 0.5em; color: #555; }
+
+    /* 選択肢 */
+    .choices {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .choice-btn {
+      padding: 14px 12px;
+      border: 2.5px solid #d1dbe8;
+      border-radius: 10px;
+      background: #fff;
+      font-family: 'BIZ UDGothic', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .choice-btn:hover:not(:disabled) {
+      border-color: var(--primary);
+      background: #eef2f8;
+      transform: translateY(-1px);
+    }
+    .choice-btn.correct {
+      background: #d4edda;
+      border-color: var(--correct);
+      color: var(--correct);
+    }
+    .choice-btn.wrong {
+      background: #fde8e8;
+      border-color: var(--wrong);
+      color: var(--wrong);
+    }
+    .choice-btn:disabled { cursor: default; }
+
+    /* フィードバック */
+    .feedback {
+      text-align: center;
+      margin-top: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      min-height: 24px;
+    }
+    .feedback.correct { color: var(--correct); }
+    .feedback.wrong   { color: var(--wrong); }
+
+    .next-btn-wrap {
+      text-align: center;
+      margin-top: 14px;
+    }
+
+    /* スコア表示 */
+    .score-inline {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 6px;
+    }
+    .score-pill {
+      background: #eef2f8;
+      border-radius: 8px;
+      padding: 4px 14px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .score-pill .val { color: var(--primary); }
+    .score-pill .val.c { color: var(--correct); }
+    .score-pill .val.w { color: var(--wrong); }
+
+    /* ===== 結果画面 ===== */
+    .result-circle {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 8px solid var(--primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .result-circle .score-num {
+      font-size: 30px;
+      font-weight: 700;
+      color: var(--primary);
+      line-height: 1;
+    }
+    .result-circle .score-denom {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .result-msg {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .result-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .stat-box {
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stat-box .stat-val { font-size: 22px; font-weight: 700; }
+    .stat-box .stat-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .stat-box.c .stat-val { color: var(--correct); }
+    .stat-box.w .stat-val { color: var(--wrong); }
+    .stat-box.p .stat-val { color: var(--primary); }
+
+    /* 問題別結果リスト */
+    .review-list {
+      margin-top: 16px;
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+    }
+    .review-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-bottom: 1px solid #f0f4f8;
+      font-size: 13px;
+    }
+    .review-item:last-child { border-bottom: none; }
+    .review-icon { font-size: 16px; flex-shrink: 0; }
+    .review-q { flex: 1; color: var(--text); }
+    .review-a { font-weight: 700; font-size: 12px; }
+    .review-a.c { color: var(--correct); }
+    .review-a.w { color: var(--wrong); }
+
+    .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+    .btn-row .btn { flex: 1; }
+
+    /* ===== レスポンシブ ===== */
+    @media (max-width: 480px) {
+      .card { padding: 20px 16px; }
+      .settings-grid { grid-template-columns: 1fr; }
+      .choices { grid-template-columns: 1fr; }
+      .result-stats { grid-template-columns: repeat(3, 1fr); }
+      .question-text { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ========== スタート画面 ========== -->
+<div class="screen active" id="screen-start">
+  <div class="card">
+    <div class="app-title">
+      <h1><ruby>都道府県<rt>とどうふけん</rt></ruby>クイズ</h1>
+      <p>全47都道府県から出題！設定をえらんではじめよう</p>
+    </div>
+
+    <div class="settings-grid">
+      <!-- カテゴリ -->
+      <div class="setting-group full">
+        <label class="setting-label">カテゴリ（複数選択可）</label>
+        <div class="category-chips" id="category-chips">
+          <span class="chip selected" data-cat="capital">県庁所在地</span>
+          <span class="chip selected" data-cat="region">地方区分</span>
+          <span class="chip selected" data-cat="reverse">所在地→県名</span>
+          <span class="chip" data-cat="area">面積ランキング</span>
+          <span class="chip" data-cat="island">島・半島</span>
+        </div>
+      </div>
+
+      <!-- 地方絞り込み -->
+      <div class="setting-group">
+        <label class="setting-label">出題地方</label>
+        <select id="region-filter">
+          <option value="all">すべて</option>
+          <option value="北海道">北海道</option>
+          <option value="東北">東北</option>
+          <option value="関東">関東</option>
+          <option value="中部">中部</option>
+          <option value="近畿">近畿</option>
+          <option value="中国">中国</option>
+          <option value="四国">四国</option>
+          <option value="九州">九州・沖縄</option>
+        </select>
+      </div>
+
+      <!-- 難易度 -->
+      <div class="setting-group">
+        <label class="setting-label">難易度</label>
+        <select id="difficulty">
+          <option value="easy">かんたん（選択4択）</option>
+          <option value="normal" selected>ふつう（選択4択＋ひっかけ）</option>
+          <option value="hard">むずかしい（選択6択）</option>
+        </select>
+      </div>
+
+      <!-- 問題数 -->
+      <div class="setting-group full">
+        <label class="setting-label">問題数：<span id="count-display">10</span>問</label>
+        <div class="count-row">
+          <input type="range" id="q-count" min="5" max="47" step="1" value="10">
+          <span class="count-val" id="count-val">10</span>
+        </div>
+      </div>
+
+      <!-- タイマー -->
+      <div class="setting-group">
+        <label class="setting-label">制限時間</label>
+        <select id="timer-setting">
+          <option value="0">なし</option>
+          <option value="15">15秒</option>
+          <option value="20" selected>20秒</option>
+          <option value="30">30秒</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="startQuiz()">
+      ▶ クイズをはじめる
+    </button>
+  </div>
+</div>
+
+
+<!-- ========== クイズ画面 ========== -->
+<div class="screen" id="screen-quiz">
+  <div class="card">
+    <!-- ヘッダー -->
+    <div class="quiz-header">
+      <span class="quiz-meta" id="quiz-progress">1 / 10</span>
+      <span class="quiz-category-badge" id="quiz-cat-badge">県庁所在地</span>
+    </div>
+
+    <!-- プログレスバー -->
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+
+    <!-- スコア -->
+    <div class="score-inline">
+      <div class="score-pill">正解 <span class="val c" id="score-correct">0</span></div>
+      <div class="score-pill">不正解 <span class="val w" id="score-wrong">0</span></div>
+    </div>
+
+    <!-- タイマー -->
+    <div class="timer-row" id="timer-row" style="display:none">
+      <div class="timer-circle" id="timer-circle">
+        <span id="timer-num">20</span>
+      </div>
+    </div>
+
+    <!-- 問題 -->
+    <div class="question-box">
+      <div class="question-hint" id="q-hint"></div>
+      <div class="question-text" id="q-text"></div>
+    </div>
+
+    <!-- 選択肢 -->
+    <div class="choices" id="choices"></div>
+
+    <!-- フィードバック -->
+    <div class="feedback" id="feedback"></div>
+
+    <!-- 次へボタン -->
+    <div class="next-btn-wrap" id="next-wrap" style="display:none">
+      <button class="btn btn-primary btn-sm" onclick="nextQuestion()">
+        次の問題 →
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ========== 結果画面 ========== -->
+<div class="screen" id="screen-result">
+  <div class="card">
+    <div class="result-circle" id="result-circle">
+      <span class="score-num" id="res-score">0</span>
+      <span class="score-denom" id="res-total">/ 10</span>
+    </div>
+
+    <div class="result-msg" id="res-msg"></div>
+
+    <div class="result-stats">
+      <div class="stat-box c">
+        <div class="stat-val" id="res-correct">0</div>
+        <div class="stat-label">正解</div>
+      </div>
+      <div class="stat-box w">
+        <div class="stat-val" id="res-wrong">0</div>
+        <div class="stat-label">不正解</div>
+      </div>
+      <div class="stat-box p">
+        <div class="stat-val" id="res-pct">0%</div>
+        <div class="stat-label">正答率</div>
+      </div>
+    </div>
+
+    <!-- 問題別レビュー -->
+    <details>
+      <summary style="cursor:pointer; font-size:13px; font-weight:700; color:var(--primary); margin-bottom:6px;">
+        問題の復習を見る
+      </summary>
+      <div class="review-list" id="review-list"></div>
+    </details>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="startQuiz()">もう一度（同じ設定）</button>
+      <button class="btn btn-outline" onclick="goToStart()">設定に戻る</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ===================================================
+//  都道府県データ
+// ===================================================
+const PREFS = [
+  { name:'北海道', capital:'札幌市',  region:'北海道', area:1 },
+  { name:'青森県', capital:'青森市',  region:'東北',   area:8 },
+  { name:'岩手県', capital:'盛岡市',  region:'東北',   area:2 },
+  { name:'宮城県', capital:'仙台市',  region:'東北',   area:16 },
+  { name:'秋田県', capital:'秋田市',  region:'東北',   area:6 },
+  { name:'山形県', capital:'山形市',  region:'東北',   area:9 },
+  { name:'福島県', capital:'福島市',  region:'東北',   area:3 },
+  { name:'茨城県', capital:'水戸市',  region:'関東',   area:24 },
+  { name:'栃木県', capital:'宇都宮市',region:'関東',   area:20 },
+  { name:'群馬県', capital:'前橋市',  region:'関東',   area:21 },
+  { name:'埼玉県', capital:'さいたま市',region:'関東', area:39 },
+  { name:'千葉県', capital:'千葉市',  region:'関東',   area:28 },
+  { name:'東京都', capital:'新宿区',  region:'関東',   area:45 },
+  { name:'神奈川県',capital:'横浜市', region:'関東',   area:43 },
+  { name:'新潟県', capital:'新潟市',  region:'中部',   area:5 },
+  { name:'富山県', capital:'富山市',  region:'中部',   area:33 },
+  { name:'石川県', capital:'金沢市',  region:'中部',   area:35 },
+  { name:'福井県', capital:'福井市',  region:'中部',   area:34 },
+  { name:'山梨県', capital:'甲府市',  region:'中部',   area:32 },
+  { name:'長野県', capital:'長野市',  region:'中部',   area:4 },
+  { name:'岐阜県', capital:'岐阜市',  region:'中部',   area:7 },
+  { name:'静岡県', capital:'静岡市',  region:'中部',   area:13 },
+  { name:'愛知県', capital:'名古屋市',region:'中部',   area:27 },
+  { name:'三重県', capital:'津市',    region:'近畿',   area:25 },
+  { name:'滋賀県', capital:'大津市',  region:'近畿',   area:38 },
+  { name:'京都府', capital:'京都市',  region:'近畿',   area:31 },
+  { name:'大阪府', capital:'大阪市',  region:'近畿',   area:46 },
+  { name:'兵庫県', capital:'神戸市',  region:'近畿',   area:12 },
+  { name:'奈良県', capital:'奈良市',  region:'近畿',   area:40 },
+  { name:'和歌山県',capital:'和歌山市',region:'近畿',  area:30 },
+  { name:'鳥取県', capital:'鳥取市',  region:'中国',   area:41 },
+  { name:'島根県', capital:'松江市',  region:'中国',   area:19 },
+  { name:'岡山県', capital:'岡山市',  region:'中国',   area:17 },
+  { name:'広島県', capital:'広島市',  region:'中国',   area:11 },
+  { name:'山口県', capital:'山口市',  region:'中国',   area:23 },
+  { name:'徳島県', capital:'徳島市',  region:'四国',   area:36 },
+  { name:'香川県', capital:'高松市',  region:'四国',   area:47 },
+  { name:'愛媛県', capital:'松山市',  region:'四国',   area:26 },
+  { name:'高知県', capital:'高知市',  region:'四国',   area:18 },
+  { name:'福岡県', capital:'福岡市',  region:'九州',   area:29 },
+  { name:'佐賀県', capital:'佐賀市',  region:'九州',   area:42 },
+  { name:'長崎県', capital:'長崎市',  region:'九州',   area:37 },
+  { name:'熊本県', capital:'熊本市',  region:'九州',   area:15 },
+  { name:'大分県', capital:'大分市',  region:'九州',   area:22 },
+  { name:'宮崎県', capital:'宮崎市',  region:'九州',   area:14 },
+  { name:'鹿児島県',capital:'鹿児島市',region:'九州',  area:10 },
+  { name:'沖縄県', capital:'那覇市',  region:'九州',   area:44 },
+];
+
+const REGIONS = ['北海道','東北','関東','中部','近畿','中国','四国','九州'];
+
+const AREA_RANK = [
+  '北海道','岩手県','福島県','長野県','新潟県','秋田県','岐阜県','青森県',
+  '山形県','鹿児島県','広島県','兵庫県','宮崎県','静岡県','熊本県','宮城県',
+  '岡山県','高知県','福島県','島根県','長野県','大分県','山口県','三重県',
+  '茨城県','愛知県','栃木県','埼玉県','福岡県','和歌山県','岡山県','山梨県',
+  '富山県','福井県','石川県','徳島県','長崎県','山形県','埼玉県','奈良県',
+  '鳥取県','佐賀県','神奈川県','沖縄県','東京都','大阪府','香川県'
+];
+
+// ===================================================
+//  設定UI
+// ===================================================
+document.getElementById('q-count').addEventListener('input', function(){
+  document.getElementById('count-val').textContent = this.value;
+  document.getElementById('count-display').textContent = this.value;
+});
+
+document.getElementById('category-chips').addEventListener('click', function(e){
+  if(!e.target.classList.contains('chip')) return;
+  e.target.classList.toggle('selected');
+  // 最低1つは選択
+  const selected = this.querySelectorAll('.chip.selected');
+  if(selected.length === 0) e.target.classList.add('selected');
+});
+
+// ===================================================
+//  状態
+// ===================================================
+let questions = [];
+let current   = 0;
+let correct   = 0;
+let wrong     = 0;
+let answered  = false;
+let timerMax  = 0;
+let timerLeft = 0;
+let timerID   = null;
+let history   = [];
+
+// ===================================================
+//  問題生成
+// ===================================================
+function getSelectedCats() {
+  return [...document.querySelectorAll('#category-chips .chip.selected')]
+         .map(c => c.dataset.cat);
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for(let i = a.length-1; i > 0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function pickChoices(correctAnswer, pool, count, key) {
+  const others = shuffle(pool.filter(p => p[key] !== correctAnswer)).slice(0, count-1);
+  return shuffle([correctAnswer, ...others.map(p => p[key])]);
+}
+
+function buildQuestion(pref, cat, difficulty) {
+  const choiceCount = difficulty === 'hard' ? 6 : 4;
+  let q = { cat, pref, correct: '', choices: [], hint: '', text: '' };
+
+  if(cat === 'capital') {
+    q.hint  = '次の都道府県の県庁所在地はどこ？';
+    q.text  = pref.name;
+    q.correct = pref.capital;
+    q.choices = pickChoices(pref.capital, PREFS, choiceCount, 'capital');
+  }
+  else if(cat === 'reverse') {
+    q.hint  = '県庁所在地から都道府県名を答えよう！';
+    q.text  = pref.capital;
+    q.correct = pref.name;
+    q.choices = pickChoices(pref.name, PREFS, choiceCount, 'name');
+  }
+  else if(cat === 'region') {
+    q.hint  = 'この都道府県はどの地方？';
+    q.text  = pref.name;
+    q.correct = pref.region + '地方';
+    const others = shuffle(REGIONS.filter(r => r !== pref.region)).slice(0, choiceCount-1);
+    q.choices = shuffle([pref.region + '地方', ...others.map(r => r + '地方')]);
+  }
+  else if(cat === 'area') {
+    // 面積が大きい順（1=最大）
+    const rank = pref.area;
+    const labels = ['1位（最大）','2位','3位','4位','5位','6位','7位','8位','9位','10位','最小（47位）'];
+    const correctLabel = rank === 1 ? '1位（最大）' : rank === 47 ? '最小（47位）' : rank + '位';
+    q.hint  = 'この都道府県の面積は何位くらい？';
+    q.text  = pref.name;
+    q.correct = correctLabel;
+    const fakeRanks = shuffle([...Array(47)].map((_,i)=>i+1).filter(r=>r!==rank)).slice(0,choiceCount-1)
+      .map(r => r === 1 ? '1位（最大）' : r === 47 ? '最小（47位）' : r + '位');
+    q.choices = shuffle([correctLabel, ...fakeRanks]);
+  }
+  else if(cat === 'island') {
+    // 九州・四国・北海道か本州かを問う
+    const islands = {
+      '北海道地方': '北海道',
+      '東北': '本州', '関東': '本州', '中部': '本州', '近畿': '本州',
+      '中国': '本州',
+      '四国': '四国',
+      '九州': '九州・沖縄',
+    };
+    const correctIsland = islands[pref.region] || '本州';
+    q.hint  = 'この都道府県がある島は？';
+    q.text  = pref.name;
+    q.correct = correctIsland;
+    q.choices = shuffle([...new Set(['本州','北海道','九州・沖縄','四国'])]);
+  }
+
+  return q;
+}
+
+function generateQuestions() {
+  const cats   = getSelectedCats();
+  const region = document.getElementById('region-filter').value;
+  const count  = parseInt(document.getElementById('q-count').value);
+  const diff   = document.getElementById('difficulty').value;
+
+  let pool = PREFS;
+  if(region !== 'all') pool = PREFS.filter(p => p.region === region || (region === '九州' && p.region === '九州'));
+
+  // 十分な数がない場合はall
+  if(pool.length < 4) pool = PREFS;
+
+  const shuffled = shuffle(pool).slice(0, Math.min(count, pool.length));
+  return shuffled.map(pref => {
+    const cat = cats[Math.floor(Math.random() * cats.length)];
+    return buildQuestion(pref, cat, diff);
+  });
+}
+
+// ===================================================
+//  クイズ制御
+// ===================================================
+function goToStart() {
+  showScreen('screen-start');
+}
+
+function startQuiz() {
+  questions = generateQuestions();
+  current = 0; correct = 0; wrong = 0; history = [];
+  timerMax = parseInt(document.getElementById('timer-setting').value);
+  showScreen('screen-quiz');
+  renderQuestion();
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+const CAT_LABELS = {
+  capital: '県庁所在地',
+  reverse: '所在地→県名',
+  region: '地方区分',
+  area: '面積ランキング',
+  island: '島・半島',
+};
+
+function renderQuestion() {
+  clearTimer();
+  answered = false;
+  const q = questions[current];
+  const total = questions.length;
+
+  // ヘッダー
+  document.getElementById('quiz-progress').textContent = `${current+1} / ${total}`;
+  document.getElementById('quiz-cat-badge').textContent = CAT_LABELS[q.cat] || q.cat;
+  document.getElementById('progress-fill').style.width = `${(current/total)*100}%`;
+  document.getElementById('score-correct').textContent = correct;
+  document.getElementById('score-wrong').textContent   = wrong;
+
+  // 問題文
+  document.getElementById('q-hint').textContent = q.hint;
+  document.getElementById('q-text').textContent = q.text;
+
+  // 選択肢
+  const choicesEl = document.getElementById('choices');
+  choicesEl.innerHTML = '';
+  // 4択→2列、6択→2列
+  choicesEl.style.gridTemplateColumns = q.choices.length > 4 ? '1fr 1fr 1fr' : '1fr 1fr';
+  q.choices.forEach(ch => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = ch;
+    btn.onclick = () => selectAnswer(ch, q);
+    choicesEl.appendChild(btn);
+  });
+
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('next-wrap').style.display = 'none';
+
+  // タイマー
+  if(timerMax > 0) {
+    document.getElementById('timer-row').style.display = 'flex';
+    startTimer(q);
+  } else {
+    document.getElementById('timer-row').style.display = 'none';
+  }
+}
+
+function selectAnswer(choice, q) {
+  if(answered) return;
+  answered = true;
+  clearTimer();
+
+  const isCorrect = choice === q.correct;
+  if(isCorrect) correct++; else wrong++;
+
+  history.push({ q, chosen: choice, correct: isCorrect });
+
+  // ボタン色付け
+  document.querySelectorAll('.choice-btn').forEach(btn => {
+    btn.disabled = true;
+    if(btn.textContent === q.correct) btn.classList.add('correct');
+    else if(btn.textContent === choice && !isCorrect) btn.classList.add('wrong');
+  });
+
+  const fb = document.getElementById('feedback');
+  if(isCorrect) {
+    fb.textContent = '✅ 正解！';
+    fb.className = 'feedback correct';
+  } else {
+    fb.textContent = `❌ 不正解。正解は「${q.correct}」`;
+    fb.className = 'feedback wrong';
+  }
+
+  document.getElementById('score-correct').textContent = correct;
+  document.getElementById('score-wrong').textContent   = wrong;
+
+  setTimeout(() => {
+    if(current + 1 < questions.length) {
+      document.getElementById('next-wrap').style.display = 'block';
+    } else {
+      document.getElementById('next-wrap').innerHTML =
+        '<button class="btn btn-primary btn-sm" onclick="showResult()">結果を見る 🎉</button>';
+      document.getElementById('next-wrap').style.display = 'block';
+    }
+  }, 300);
+}
+
+function nextQuestion() {
+  current++;
+  renderQuestion();
+}
+
+// ===================================================
+//  タイマー
+// ===================================================
+function startTimer(q) {
+  timerLeft = timerMax;
+  const circle = document.getElementById('timer-circle');
+  const num = document.getElementById('timer-num');
+  circle.className = 'timer-circle';
+  num.textContent = timerLeft;
+
+  timerID = setInterval(() => {
+    timerLeft--;
+    num.textContent = timerLeft;
+    if(timerLeft <= 5)       circle.className = 'timer-circle danger';
+    else if(timerLeft <= 10) circle.className = 'timer-circle warning';
+
+    if(timerLeft <= 0) {
+      clearTimer();
+      // タイムアウト → 強制不正解
+      if(!answered) {
+        answered = true;
+        wrong++;
+        history.push({ q, chosen: null, correct: false });
+        document.querySelectorAll('.choice-btn').forEach(btn => {
+          btn.disabled = true;
+          if(btn.textContent === q.correct) btn.classList.add('correct');
+        });
+        const fb = document.getElementById('feedback');
+        fb.textContent = `⏰ 時間切れ！正解は「${q.correct}」`;
+        fb.className = 'feedback wrong';
+        document.getElementById('score-wrong').textContent = wrong;
+        setTimeout(() => {
+          if(current + 1 < questions.length) {
+            document.getElementById('next-wrap').style.display = 'block';
+          } else {
+            document.getElementById('next-wrap').innerHTML =
+              '<button class="btn btn-primary btn-sm" onclick="showResult()">結果を見る 🎉</button>';
+            document.getElementById('next-wrap').style.display = 'block';
+          }
+        }, 300);
+      }
+    }
+  }, 1000);
+}
+
+function clearTimer() {
+  if(timerID) { clearInterval(timerID); timerID = null; }
+}
+
+// ===================================================
+//  結果
+// ===================================================
+const MESSAGES = [
+  [1.0,  '🏆 完璧！全問正解！すごい！'],
+  [0.9,  '🥇 ほぼ満点！とても優秀！'],
+  [0.7,  '🥈 よくできました！あと少し！'],
+  [0.5,  '🥉 合格ライン！復習しよう'],
+  [0.3,  '📚 もう少し勉強が必要かも'],
+  [0,    '💪 復習してもう一度チャレンジ！'],
+];
+
+function showResult() {
+  clearTimer();
+  const total = questions.length;
+  const pct   = Math.round((correct / total) * 100);
+
+  document.getElementById('res-score').textContent  = correct;
+  document.getElementById('res-total').textContent  = `/ ${total}`;
+  document.getElementById('res-correct').textContent = correct;
+  document.getElementById('res-wrong').textContent   = wrong;
+  document.getElementById('res-pct').textContent     = pct + '%';
+
+  const msg = MESSAGES.find(([t]) => pct/100 >= t);
+  document.getElementById('res-msg').textContent = msg ? msg[1] : '';
+
+  // 円の色
+  const circle = document.getElementById('result-circle');
+  if(pct >= 90) circle.style.borderColor = 'var(--correct)';
+  else if(pct >= 60) circle.style.borderColor = 'var(--primary)';
+  else circle.style.borderColor = 'var(--wrong)';
+
+  // レビューリスト
+  const list = document.getElementById('review-list');
+  list.innerHTML = history.map((h, i) => `
+    <div class="review-item">
+      <span class="review-icon">${h.correct ? '✅' : '❌'}</span>
+      <span class="review-q">
+        <strong>${i+1}.</strong> ${h.q.text}
+        <span style="font-size:11px;color:var(--muted)">（${CAT_LABELS[h.q.cat]}）</span>
+      </span>
+      <span class="review-a ${h.correct ? 'c' : 'w'}">
+        ${h.correct ? h.q.correct : `${h.chosen ?? '時間切れ'} → 正: ${h.q.correct}`}
+      </span>
+    </div>
+  `).join('');
+
+  showScreen('screen-result');
+}
+</script>
+</body>
+</html>
